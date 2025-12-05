@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retirement Planner</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            background: white;
+            min-height: 100vh;
+        }
+
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+
+        h2 {
+            color: #34495e;
+            margin-top: 40px;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+        }
+
+        h3 {
+            color: #34495e;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1.2em;
+        }
+
+        .input-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+
+        .input-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            margin-bottom: 10px;
+        }
+
+        label {
+            display: flex;
+            flex-direction: column;
+            font-weight: 600;
+            color: #555;
+            min-width: 200px;
+        }
+
+        input[type="date"],
+        input[type="number"] {
+            margin-top: 5px;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            width: 100%;
+        }
+
+        input[type="checkbox"] {
+            margin-left: 8px;
+            width: 18px;
+            height: 18px;
+        }
+
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        button:hover:not(:disabled) {
+            background: #2980b9;
+        }
+
+        button:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        .summary-box {
+            display: flex;
+            gap: 30px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .summary-item {
+            padding: 15px 20px;
+            background: #e8f4f8;
+            border-radius: 5px;
+            border-left: 4px solid #3498db;
+        }
+
+        .summary-item strong {
+            display: block;
+            font-size: 1.3em;
+            color: #2c3e50;
+            margin-top: 5px;
+        }
+
+        .chart-container {
+            margin: 30px 0;
+            padding: 20px;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        canvas {
+            max-height: 400px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+
+        th {
+            background: #f3f4f6;
+            color: #222;
+            font-weight: 600;
+            padding: 12px 8px;
+            text-align: left;
+            border: 1px solid #ddd;
+            position: sticky;
+            top: 0;
+        }
+
+        td {
+            padding: 10px 8px;
+            border: 1px solid #ddd;
+            color: #222;
+        }
+
+        tbody tr:nth-child(even) {
+            background: #f9f9f9;
+        }
+
+        tbody tr:hover {
+            background: #e8f4f8;
+        }
+
+        .results-section {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 5px;
+        }
+
+        .percentile-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .percentile-list li {
+            padding: 8px 0;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .caption {
+            font-size: 12px;
+            color: #555;
+            margin-top: 10px;
+            font-style: italic;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Retirement Planner</h1>
+
+        <div class="input-section">
+            <div class="input-row">
+                <label>
+                    Current Date:
+                    <input type="date" id="currentDate">
+                </label>
+                <button onclick="setToday()">Today</button>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <div class="input-row">
+                <label>
+                    Your Birthdate:
+                    <input type="date" id="yourBirthdate" value="1964-04-22">
+                </label>
+                <label>
+                    Spouse's Birthdate:
+                    <input type="date" id="spouseBirthdate" value="1965-02-03">
+                </label>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <div class="input-row">
+                <label>
+                    Retirement Age:
+                    <input type="number" id="retirementAge" value="65">
+                </label>
+                <label>
+                    Max Age:
+                    <input type="number" id="maxAge" value="100">
+                </label>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <div class="input-row">
+                <label>
+                    Taxable Accounts ($):
+                    <input type="number" id="taxableAccounts" value="2997000">
+                </label>
+                <label>
+                    Retirement Accounts ($):
+                    <input type="number" id="retirementAccounts" value="875000">
+                </label>
+                <label>
+                    Annual Expenses ($):
+                    <input type="number" id="annualExpenses" value="200000">
+                </label>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <div class="input-row">
+                <label>
+                    Your SS Age:
+                    <input type="number" id="yourSSAge" value="67">
+                </label>
+                <label>
+                    Your SS Benefit at FRA ($):
+                    <input type="number" id="yourSSBenefitAtFRA" value="40000">
+                </label>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <div class="input-row">
+                <label>
+                    Spouse SS Age:
+                    <input type="number" id="spouseSSAge" value="67">
+                </label>
+                <label>
+                    Spouse's Own Benefit ($):
+                    <input type="number" id="spouseOwnBenefit" value="0">
+                </label>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <div class="input-row">
+                <label>
+                    Inflation Rate (%):
+                    <input type="number" id="inflationRate" value="2.5" step="0.1">
+                </label>
+                <label>
+                    Return Rate (%):
+                    <input type="number" id="returnRate" value="6.25" step="0.01">
+                </label>
+                <label>
+                    Tax Rate (%):
+                    <input type="number" id="taxRate" value="25">
+                </label>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <div class="input-row">
+                <label>
+                    Std Dev / Volatility (%):
+                    <input type="number" id="stdDev" value="10" step="0.1" min="0" max="50">
+                </label>
+                <label>
+                    Simulations:
+                    <input type="number" id="simulations" value="1000" min="100" max="20000" step="100">
+                </label>
+                <label>
+                    RNG Seed (0 = random):
+                    <input type="number" id="seed" value="0">
+                </label>
+            </div>
+        </div>
+
+        <div style="margin: 20px 0; display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+            <button onclick="calculateProjections()">Calculate Projections</button>
+            <button onclick="runMonteCarlo()" id="mcButton">Run Monte Carlo Simulation</button>
+            <label style="font-weight:600; color:#555; display:flex; align-items:center; gap:8px;">
+                Load defaults JSON:
+                <input type="file" id="defaultsFile" accept="application/json,.json" onchange="loadDefaultsFromFile(event)" />
+            </label>
+            <div id="serverMsg" style="color:#b00; font-size:13px;"></div>
+        </div>
+
+        <div id="projectionsSection" style="display: none;">
+            <h2>Projections</h2>
+            <div class="summary-box">
+                <div class="summary-item">
+                    Final Balance: <strong id="finalBalance">-</strong>
+                </div>
+                <div class="summary-item">
+                    Money Lasts Until Age: <strong id="moneyLasts">-</strong>
+                </div>
+                <div class="summary-item">
+                    Avg Withdrawal Rate: <strong id="avgWithdrawalRate">-</strong>
+                </div>
+            </div>
+
+            <div class="chart-container">
+                <canvas id="portfolioChart"></canvas>
+            </div>
+
+            <div style="overflow-x: auto;">
+                <table id="projectionsTable">
+                    <thead>
+                        <tr>
+                            <th>Year</th>
+                            <th>Your Age</th>
+                            <th>Spouse Age</th>
+                            <th>Taxable</th>
+                            <th>Retirement</th>
+                            <th>Total</th>
+                            <th>Expenses</th>
+                            <th>Your SS</th>
+                            <th>Spouse SS</th>
+                            <th>Net SS</th>
+                            <th>Withdrawal</th>
+                            <th>Taxes</th>
+                            <th>W/D Rate %</th>
+                        </tr>
+                    </thead>
+                    <tbody id="projectionsBody"></tbody>
+                </table>
+            </div>
+
+            <h3>Social Security Benefits</h3>
+            <p>Your calculated benefit: <strong id="yourBenefit">-</strong></p>
+            <p>Spouse's calculated benefit: <strong id="spouseBenefit">-</strong></p>
+        </div>
+
+        <div id="monteCarloSection" style="display: none;">
+            <h2>Monte Carlo Simulation Results</h2>
+            <p>Success Rate: <strong id="successRate">-</strong></p>
+            <p>Median End Balance: <strong id="medianBalance">-</strong></p>
+            <h3>Percentiles</h3>
+            <ul class="percentile-list" id="percentilesList"></ul>
+
+            <div class="chart-container">
+                <h3>End Balance Distribution</h3>
+                <canvas id="histogramChart"></canvas>
+                <div class="caption">
+                    Red line = projection final balance from deterministic scenario
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let projectionsData = [];
+        let portfolioChartInstance = null;
+        let histogramChartInstance = null;
+
+        // Set today's date on load and try to load defaults from `defaults.json`
+        window.addEventListener('DOMContentLoaded', () => {
+            setToday();
+            // Try to fetch defaults.json from the same folder
+            fetchDefaultsAndApply();
+        });
+
+        async function fetchDefaultsAndApply() {
+            try {
+                const resp = await fetch('defaults.json');
+                if (!resp.ok) throw new Error('Failed to fetch defaults.json: ' + resp.status);
+                const defaults = await resp.json();
+                applyDefaults(defaults);
+                console.log('Defaults loaded from defaults.json');
+            } catch (err) {
+                // Fetch may fail when opening the file via file:// protocol. That's expected.
+                const msg = 'Could not load defaults.json (fetch). If you opened the file directly with file:// this is expected. Serve the folder with a local HTTP server to load defaults.json, or use the "Load defaults JSON" file picker.';
+                console.warn(msg, err);
+                const serverMsgEl = document.getElementById('serverMsg');
+                if (serverMsgEl) serverMsgEl.textContent = msg;
+            }
+        }
+
+        function applyDefaults(defaults) {
+            // Map keys in defaults to element IDs where applicable
+            Object.keys(defaults).forEach(key => {
+                try {
+                    const el = document.getElementById(key);
+                    if (!el) return;
+                    if (el.type === 'checkbox') {
+                        el.checked = Boolean(defaults[key]);
+                    } else {
+                        el.value = defaults[key];
+                    }
+                } catch (e) {
+                    // ignore invalid assignments
+                }
+            });
+        }
+
+        // File picker fallback: load defaults from a user-selected JSON file
+        function loadDefaultsFromFile(event) {
+            const file = event?.target?.files && event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const json = JSON.parse(e.target.result);
+                    applyDefaults(json);
+                    const serverMsgEl = document.getElementById('serverMsg');
+                    if (serverMsgEl) serverMsgEl.textContent = 'Defaults loaded from selected file.';
+                } catch (err) {
+                    alert('Failed to parse JSON file: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function setToday() {
+            document.getElementById('currentDate').value = new Date().toISOString().slice(0, 10);
+        }
+
+        function getInputs() {
+            return {
+                currentDate: document.getElementById('currentDate').value,
+                yourBirthdate: document.getElementById('yourBirthdate').value,
+                spouseBirthdate: document.getElementById('spouseBirthdate').value,
+                retirementAge: parseFloat(document.getElementById('retirementAge').value),
+                maxAge: parseFloat(document.getElementById('maxAge').value),
+                taxableAccounts: parseFloat(document.getElementById('taxableAccounts').value),
+                retirementAccounts: parseFloat(document.getElementById('retirementAccounts').value),
+                annualExpenses: parseFloat(document.getElementById('annualExpenses').value),
+                yourSSAge: parseFloat(document.getElementById('yourSSAge').value),
+                yourSSBenefitAtFRA: parseFloat(document.getElementById('yourSSBenefitAtFRA').value),
+                spouseSSAge: parseFloat(document.getElementById('spouseSSAge').value),
+                spouseOwnBenefit: parseFloat(document.getElementById('spouseOwnBenefit').value),
+                inflationRate: parseFloat(document.getElementById('inflationRate').value),
+                returnRate: parseFloat(document.getElementById('returnRate').value),
+                taxRate: parseFloat(document.getElementById('taxRate').value),
+                stdDev: parseFloat(document.getElementById('stdDev').value),
+                simulations: parseInt(document.getElementById('simulations').value),
+                seed: parseInt(document.getElementById('seed').value)
+            };
+        }
+
+        function formatCurrency(value) {
+            return new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(value);
+        }
+
+        function calculateAge(birthdate, currentDate) {
+            const today = new Date(currentDate);
+            const birth = new Date(birthdate);
+            return Math.floor((today.getTime() - birth.getTime()) / (365.25 * 24 * 60 * 60 * 1000));
+        }
+
+        function calculateProjections() {
+            const inputs = getInputs();
+            const results = [];
+            
+            let taxable = inputs.taxableAccounts;
+            let retirement = inputs.retirementAccounts;
+            let yourAge = calculateAge(inputs.yourBirthdate, inputs.currentDate);
+            let spouseAge = calculateAge(inputs.spouseBirthdate, inputs.currentDate);
+            
+            const yourFRA = 67;
+            const spouseFRA = 67;
+            
+            // Calculate first year fraction
+            const today = new Date(inputs.currentDate);
+            const birth = new Date(inputs.yourBirthdate);
+            const nextBirthday = new Date(birth);
+            nextBirthday.setFullYear(today.getFullYear());
+            if (today > nextBirthday) nextBirthday.setFullYear(today.getFullYear() + 1);
+            const msRemaining = nextBirthday.getTime() - today.getTime();
+            const msInYear = 365.25 * 24 * 60 * 60 * 1000;
+            let firstYearFraction = Math.max(0, Math.min(1, msRemaining / msInYear));
+            
+            let isFirstYear = true;
+            let yearIdx = 0;
+            
+            while (yourAge <= inputs.maxAge) {
+                const inflationMultiplier = Math.pow(1 + inputs.inflationRate / 100, yearIdx);
+                const adjustedExpenses = inputs.annualExpenses * inflationMultiplier * (isFirstYear ? firstYearFraction : 1);
+                
+                // Calculate SS income
+                let yourSSIncome = 0;
+                if (yourAge >= inputs.yourSSAge) {
+                    const delayYears = inputs.yourSSAge - yourFRA;
+                    const earlyYears = yourFRA - inputs.yourSSAge;
+                    const ssMultiplier = delayYears > 0 ? 1 + (delayYears * 0.08) : 1 - (earlyYears * 0.067);
+                    yourSSIncome = inputs.yourSSBenefitAtFRA * ssMultiplier * inflationMultiplier * (isFirstYear ? firstYearFraction : 1);
+                }
+                
+                let spouseSSIncome = 0;
+                if (spouseAge >= inputs.spouseSSAge && yourAge >= inputs.yourSSAge) {
+                    const spousalBenefit = inputs.yourSSBenefitAtFRA * 0.5;
+                    let adjustedSpousalBenefit = spousalBenefit;
+                    if (inputs.spouseSSAge < spouseFRA) {
+                        const earlyYears = spouseFRA - inputs.spouseSSAge;
+                        adjustedSpousalBenefit = spousalBenefit * (1 - earlyYears * 0.067);
+                    }
+                    spouseSSIncome = Math.max(inputs.spouseOwnBenefit, adjustedSpousalBenefit) * inflationMultiplier * (isFirstYear ? firstYearFraction : 1);
+                }
+                
+                const totalSSIncome = yourSSIncome + spouseSSIncome;
+                const ssTaxable = totalSSIncome * 0.85;
+                const ssTaxes = ssTaxable * (inputs.taxRate / 100);
+                const netSSIncome = totalSSIncome - ssTaxes;
+                
+                // Calculate net withdrawal needed (expenses - SS income)
+                const netNeeded = yourAge >= inputs.retirementAge ? adjustedExpenses - netSSIncome : 0;
+                
+                // Withdraw BEFORE applying returns
+                let taxableWithdrawal = 0;
+                let retirementWithdrawal = 0;
+                let withdrawalTaxes = 0;
+                
+                if (netNeeded > 0) {
+                    // Solve for gross withdrawal accounting for taxes
+                    // For taxable: grossWithdrawal = netNeeded + (netNeeded * 0.5 * taxRate) / (1 - 0.5 * taxRate)
+                    // Simplified: grossWithdrawal = netNeeded / (1 - 0.5 * taxRate)
+                    const taxableEffectiveRate = 0.5 * (inputs.taxRate / 100);
+                    const grossNeededFromTaxable = netNeeded / (1 - taxableEffectiveRate);
+                    
+                    if (taxable >= grossNeededFromTaxable) {
+                        // Can cover entirely from taxable
+                        taxableWithdrawal = grossNeededFromTaxable;
+                        withdrawalTaxes = grossNeededFromTaxable * taxableEffectiveRate;
+                        taxable -= taxableWithdrawal;
+                    } else if (taxable > 0) {
+                        // Partial from taxable, rest from retirement
+                        taxableWithdrawal = taxable;
+                        withdrawalTaxes = taxable * taxableEffectiveRate;
+                        const netFromTaxable = taxable - withdrawalTaxes;
+                        const stillNeeded = netNeeded - netFromTaxable;
+                        // For retirement accounts, gross = net / (1 - taxRate)
+                        retirementWithdrawal = stillNeeded / (1 - inputs.taxRate / 100);
+                        withdrawalTaxes += retirementWithdrawal * (inputs.taxRate / 100);
+                        taxable = 0;
+                        retirement -= retirementWithdrawal;
+                    } else {
+                        // All from retirement
+                        retirementWithdrawal = netNeeded / (1 - inputs.taxRate / 100);
+                        withdrawalTaxes = retirementWithdrawal * (inputs.taxRate / 100);
+                        retirement -= retirementWithdrawal;
+                    }
+                }
+                
+                // Store balance before returns for withdrawal rate
+                const totalBeforeReturns = taxable + retirement;
+                
+                // Apply returns AFTER withdrawals
+                const totalAfterWithdrawal = taxable + retirement;
+                const returnAmount = totalAfterWithdrawal * (inputs.returnRate / 100) * (isFirstYear ? firstYearFraction : 1);
+                taxable += returnAmount * (taxable / (totalAfterWithdrawal || 1));
+                retirement += returnAmount * (retirement / (totalAfterWithdrawal || 1));
+                
+                // RMDs
+                let rmdAmount = 0;
+                let rmdTaxes = 0;
+                if (yourAge >= 73 && retirement > 0) {
+                    const rmdTable = {
+                        73: 27.4, 74: 26.5, 75: 25.5, 76: 24.6, 77: 23.7, 78: 22.9, 79: 22.0, 80: 21.1,
+                        81: 20.2, 82: 19.4, 83: 18.5, 84: 17.7, 85: 16.8, 86: 16.0, 87: 15.2, 88: 14.4,
+                        89: 13.7, 90: 12.9, 91: 12.2, 92: 11.5, 93: 10.8, 94: 10.1, 95: 9.5
+                    };
+                    const rmdFactor = rmdTable[yourAge] || 9.5;
+                    const requiredRmd = retirement / rmdFactor;
+                    if (requiredRmd > retirementWithdrawal) {
+                        rmdAmount = requiredRmd - retirementWithdrawal;
+                        retirement -= rmdAmount;
+                        rmdTaxes = rmdAmount * (inputs.taxRate / 100);
+                        taxable += rmdAmount - rmdTaxes;
+                    }
+                }
+                
+                const totalTaxes = ssTaxes + withdrawalTaxes;
+                const totalTaxesPaid = totalTaxes + rmdTaxes;
+                const totalGrossWithdrawal = taxableWithdrawal + retirementWithdrawal + rmdAmount;
+                const total = taxable + retirement;
+                const withdrawalRate = totalBeforeReturns > 0 ? (totalGrossWithdrawal / totalBeforeReturns * 100) : 0;
+                
+                results.push({
+                    yourAge,
+                    spouseAge,
+                    year: yearIdx + 1,
+                    taxable: Math.max(0, taxable),
+                    retirement: Math.max(0, retirement),
+                    total: Math.max(0, total),
+                    expenses: yourAge >= inputs.retirementAge ? adjustedExpenses : 0,
+                    yourSSIncome,
+                    spouseSSIncome,
+                    totalSSIncome,
+                    netSSIncome,
+                    withdrawal: totalGrossWithdrawal,
+                    taxes: totalTaxesPaid,
+                    withdrawalRate: withdrawalRate.toFixed(2)
+                });
+                
+                if (total <= 0 && yourAge >= inputs.retirementAge) break;
+                
+                yourAge++;
+                spouseAge++;
+                isFirstYear = false;
+                yearIdx++;
+            }
+            
+            projectionsData = results;
+            displayProjections(results, inputs);
+        }
+
+        function displayProjections(results, inputs) {
+            document.getElementById('projectionsSection').style.display = 'block';
+            
+            const finalBalance = results[results.length - 1]?.total || 0;
+            const moneyLasts = results[results.length - 1]?.yourAge || 0;
+            
+            const retirementYears = results.filter(p => p.yourAge >= inputs.retirementAge && p.withdrawal > 0);
+            const avgWithdrawalRate = retirementYears.reduce((sum, p) => sum + parseFloat(p.withdrawalRate), 0) / (retirementYears.length || 1);
+            
+            document.getElementById('finalBalance').textContent = formatCurrency(finalBalance);
+            document.getElementById('moneyLasts').textContent = moneyLasts;
+            document.getElementById('avgWithdrawalRate').textContent = avgWithdrawalRate.toFixed(1) + '%';
+            
+            // Calculate SS benefits
+            const yourFRA = 67;
+            const yourDelayYears = inputs.yourSSAge - yourFRA;
+            const yourEarlyYears = yourFRA - inputs.yourSSAge;
+            const yourSSMultiplier = yourDelayYears > 0 ? 1 + (yourDelayYears * 0.08) : 1 - (yourEarlyYears * 0.067);
+            const yourActualBenefit = inputs.yourSSBenefitAtFRA * yourSSMultiplier;
+            
+            const spouseFRA = 67;
+            const spousalBenefit = inputs.yourSSBenefitAtFRA * 0.5;
+            let spouseActualBenefit = spousalBenefit;
+            if (inputs.spouseSSAge < spouseFRA) {
+                const spouseEarlyYears = spouseFRA - inputs.spouseSSAge;
+                spouseActualBenefit = spousalBenefit * (1 - spouseEarlyYears * 0.067);
+            }
+            
+            document.getElementById('yourBenefit').textContent = formatCurrency(yourActualBenefit);
+            document.getElementById('spouseBenefit').textContent = formatCurrency(spouseActualBenefit);
+            
+            // Update table
+            const tbody = document.getElementById('projectionsBody');
+            tbody.innerHTML = '';
+            results.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.year}</td>
+                    <td>${row.yourAge}</td>
+                    <td>${row.spouseAge}</td>
+                    <td>${formatCurrency(row.taxable)}</td>
+                    <td>${formatCurrency(row.retirement)}</td>
+                    <td>${formatCurrency(row.total)}</td>
+                    <td>${formatCurrency(row.expenses)}</td>
+                    <td>${formatCurrency(row.yourSSIncome)}</td>
+                    <td>${formatCurrency(row.spouseSSIncome)}</td>
+                    <td>${formatCurrency(row.netSSIncome)}</td>
+                    <td>${formatCurrency(row.withdrawal)}</td>
+                    <td>${formatCurrency(row.taxes)}</td>
+                    <td>${row.withdrawalRate}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            
+            // Update chart
+            updatePortfolioChart(results);
+        }
+
+        function updatePortfolioChart(results) {
+            const ctx = document.getElementById('portfolioChart').getContext('2d');
+            
+            if (portfolioChartInstance) {
+                portfolioChartInstance.destroy();
+            }
+            
+            portfolioChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: results.map(r => r.yourAge),
+                    datasets: [
+                        {
+                            label: 'Total',
+                            data: results.map(r => r.total),
+                            borderColor: '#8884d8',
+                            backgroundColor: 'rgba(136, 132, 216, 0.1)',
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Taxable',
+                            data: results.map(r => r.taxable),
+                            borderColor: '#82ca9d',
+                            backgroundColor: 'rgba(130, 202, 157, 0.1)',
+                            tension: 0.1
+                        },
+                        {
+                            label: 'Retirement',
+                            data: results.map(r => r.retirement),
+                            borderColor: '#ffc658',
+                            backgroundColor: 'rgba(255, 198, 88, 0.1)',
+                            tension: 0.1
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Portfolio Value Over Time'
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.dataset.label + ': ' + formatCurrency(context.parsed.y);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Your Age'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Account Value ($)'
+                            },
+                            ticks: {
+                                callback: function(value) {
+                                    return '$' + (value / 1000000).toFixed(1) + 'M';
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Seeded PRNG (Mulberry32)
+        function mulberry32(seed) {
+            return function() {
+                let t = seed += 0x6D2B79F5;
+                t = Math.imul(t ^ (t >>> 15), t | 1);
+                t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+                return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+            };
+        }
+
+        function runMonteCarlo() {
+            const inputs = getInputs();
+            const button = document.getElementById('mcButton');
+            button.disabled = true;
+            button.textContent = 'Running...';
+            
+            setTimeout(() => {
+                const endBalances = [];
+                let successCount = 0;
+                const rng = inputs.seed ? mulberry32(inputs.seed) : Math.random;
+                
+                for (let i = 0; i < inputs.simulations; i++) {
+                    let taxable = inputs.taxableAccounts;
+                    let retirement = inputs.retirementAccounts;
+                    let yourAge = calculateAge(inputs.yourBirthdate, inputs.currentDate);
+                    let spouseAge = calculateAge(inputs.spouseBirthdate, inputs.currentDate);
+                    
+                    // Calculate first year fraction
+                    const today = new Date(inputs.currentDate);
+                    const birth = new Date(inputs.yourBirthdate);
+                    const nextBirthday = new Date(birth);
+                    nextBirthday.setFullYear(today.getFullYear());
+                    if (today > nextBirthday) nextBirthday.setFullYear(today.getFullYear() + 1);
+                    const msRemaining = nextBirthday.getTime() - today.getTime();
+                    const msInYear = 365.25 * 24 * 60 * 60 * 1000;
+                    let firstYearFraction = Math.max(0, Math.min(1, msRemaining / msInYear));
+                    
+                    let isFirstYear = true;
+                    let yearIdx = 0;
+                    let broke = false;
+                    
+                    while (yourAge <= inputs.maxAge) {
+                        // Random return
+                        const mean = inputs.returnRate / 100;
+                        const sd = inputs.stdDev / 100;
+                        const u1 = rng();
+                        const u2 = rng();
+                        const randStdNormal = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+                        const randomReturn = mean + sd * randStdNormal;
+                        
+                        const inflationMultiplier = Math.pow(1 + inputs.inflationRate / 100, yearIdx);
+                        const adjustedExpenses = inputs.annualExpenses * inflationMultiplier * (isFirstYear ? firstYearFraction : 1);
+                        
+                        // SS income (same logic as projections)
+                        let yourSSIncome = 0;
+                        if (yourAge >= inputs.yourSSAge) {
+                            const yourFRA = 67;
+                            const delayYears = inputs.yourSSAge - yourFRA;
+                            const earlyYears = yourFRA - inputs.yourSSAge;
+                            const ssMultiplier = delayYears > 0 ? 1 + (delayYears * 0.08) : 1 - (earlyYears * 0.067);
+                            yourSSIncome = inputs.yourSSBenefitAtFRA * ssMultiplier * inflationMultiplier * (isFirstYear ? firstYearFraction : 1);
+                        }
+                        
+                        let spouseSSIncome = 0;
+                        if (spouseAge >= inputs.spouseSSAge && yourAge >= inputs.yourSSAge) {
+                            const spouseFRA = 67;
+                            const spousalBenefit = inputs.yourSSBenefitAtFRA * 0.5;
+                            let adjustedSpousalBenefit = spousalBenefit;
+                            if (inputs.spouseSSAge < spouseFRA) {
+                                const earlyYears = spouseFRA - inputs.spouseSSAge;
+                                adjustedSpousalBenefit = spousalBenefit * (1 - earlyYears * 0.067);
+                            }
+                            spouseSSIncome = Math.max(inputs.spouseOwnBenefit, adjustedSpousalBenefit) * inflationMultiplier * (isFirstYear ? firstYearFraction : 1);
+                        }
+                        
+                        const totalSSIncome = yourSSIncome + spouseSSIncome;
+                        const ssTaxable = totalSSIncome * 0.85;
+                        const ssTaxes = ssTaxable * (inputs.taxRate / 100);
+                        const netSSIncome = totalSSIncome - ssTaxes;
+                        
+                        // Calculate net withdrawal needed (expenses - SS income)
+                        const netNeeded = yourAge >= inputs.retirementAge ? adjustedExpenses - netSSIncome : 0;
+                        
+                        // Withdraw BEFORE returns
+                        if (netNeeded > 0) {
+                            // Solve for gross withdrawal accounting for taxes
+                            const taxableEffectiveRate = 0.5 * (inputs.taxRate / 100);
+                            const grossNeededFromTaxable = netNeeded / (1 - taxableEffectiveRate);
+                            
+                            if (taxable >= grossNeededFromTaxable) {
+                                // Can cover entirely from taxable
+                                taxable -= grossNeededFromTaxable;
+                            } else if (taxable > 0) {
+                                // Partial from taxable, rest from retirement
+                                const withdrawalTaxes = taxable * taxableEffectiveRate;
+                                const netFromTaxable = taxable - withdrawalTaxes;
+                                const stillNeeded = netNeeded - netFromTaxable;
+                                const retirementWithdrawal = stillNeeded / (1 - inputs.taxRate / 100);
+                                taxable = 0;
+                                retirement -= retirementWithdrawal;
+                            } else {
+                                // All from retirement
+                                const retirementWithdrawal = netNeeded / (1 - inputs.taxRate / 100);
+                                retirement -= retirementWithdrawal;
+                            }
+                        }
+                        
+                        // Apply returns AFTER withdrawals
+                        const totalAfterWithdrawal = taxable + retirement;
+                        const returnAmount = totalAfterWithdrawal * randomReturn * (isFirstYear ? firstYearFraction : 1);
+                        taxable += returnAmount * (taxable / (totalAfterWithdrawal || 1));
+                        retirement += returnAmount * (retirement / (totalAfterWithdrawal || 1));
+                        
+                        // RMDs
+                        if (yourAge >= 73 && retirement > 0) {
+                            const rmdTable = {
+                                73: 27.4, 74: 26.5, 75: 25.5, 76: 24.6, 77: 23.7, 78: 22.9, 79: 22.0, 80: 21.1,
+                                81: 20.2, 82: 19.4, 83: 18.5, 84: 17.7, 85: 16.8, 86: 16.0, 87: 15.2, 88: 14.4,
+                                89: 13.7, 90: 12.9, 91: 12.2, 92: 11.5, 93: 10.8, 94: 10.1, 95: 9.5
+                            };
+                            const rmdFactor = rmdTable[yourAge] || 9.5;
+                            const requiredRmd = retirement / rmdFactor;
+                            const rmdAmount = Math.max(0, requiredRmd);
+                            retirement -= rmdAmount;
+                            const rmdTaxes = rmdAmount * (inputs.taxRate / 100);
+                            taxable += rmdAmount - rmdTaxes;
+                        }
+                        
+                        if ((taxable + retirement) <= 0 && yourAge >= inputs.retirementAge) {
+                            broke = true;
+                            break;
+                        }
+                        
+                        yourAge++;
+                        spouseAge++;
+                        isFirstYear = false;
+                        yearIdx++;
+                    }
+                    
+                    const endBalance = taxable + retirement;
+                    endBalances.push(endBalance);
+                    if (!broke) successCount++;
+                }
+                
+                endBalances.sort((a, b) => a - b);
+                const percentiles = [0.1, 0.25, 0.5, 0.75, 0.9].map(p => 
+                    endBalances[Math.floor(p * endBalances.length)] || 0
+                );
+                
+                displayMonteCarloResults({
+                    successRate: (successCount / inputs.simulations) * 100,
+                    medianEndBalance: percentiles[2],
+                    percentiles,
+                    endBalances
+                });
+                
+                button.disabled = false;
+                button.textContent = 'Run Monte Carlo Simulation';
+            }, 100);
+        }
+
+        function displayMonteCarloResults(results) {
+            document.getElementById('monteCarloSection').style.display = 'block';
+            
+            document.getElementById('successRate').textContent = results.successRate.toFixed(2) + '%';
+            document.getElementById('medianBalance').textContent = formatCurrency(results.medianEndBalance);
+            
+            const percentilesList = document.getElementById('percentilesList');
+            percentilesList.innerHTML = '';
+            const percentileLabels = [10, 20, 50, 75, 90];
+            results.percentiles.forEach((p, idx) => {
+                const li = document.createElement('li');
+                li.textContent = `${percentileLabels[idx]}th Percentile: ${formatCurrency(p)}`;
+                percentilesList.appendChild(li);
+            });
+            
+            updateHistogram(results.endBalances);
+        }
+
+        function updateHistogram(endBalances) {
+            const ctx = document.getElementById('histogramChart').getContext('2d');
+            
+            if (histogramChartInstance) {
+                histogramChartInstance.destroy();
+            }
+            
+            // Create bins
+            const binWidth = 500000;
+            const minVal = Math.min(...endBalances);
+            const maxVal = Math.max(...endBalances);
+            const minBin = Math.floor(Math.min(minVal, 0) / binWidth) * binWidth;
+            const maxBin = Math.ceil(Math.max(maxVal, 0) / binWidth) * binWidth;
+            const numBins = Math.ceil((maxBin - minBin) / binWidth);
+            
+            const bins = new Array(numBins).fill(0);
+            endBalances.forEach(val => {
+                const binIndex = Math.floor((val - minBin) / binWidth);
+                if (binIndex >= 0 && binIndex < numBins) {
+                    bins[binIndex]++;
+                }
+            });
+            
+            const labels = bins.map((_, i) => {
+                const binStart = minBin + i * binWidth;
+                return formatCurrency(binStart + binWidth / 2);
+            });
+            
+            // Get final balance from projections for reference line
+            const finalBalance = projectionsData.length > 0 ? projectionsData[projectionsData.length - 1].total : 0;
+            
+            histogramChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Frequency',
+                        data: bins,
+                        backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                        borderColor: 'rgba(54, 162, 235, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Distribution of Final Portfolio Values'
+                        },
+                        annotation: {
+                            annotations: {
+                                line1: {
+                                    type: 'line',
+                                    xMin: formatCurrency(finalBalance),
+                                    xMax: formatCurrency(finalBalance),
+                                    borderColor: 'rgb(255, 99, 132)',
+                                    borderWidth: 2,
+                                    label: {
+                                        display: true,
+                                        content: 'Projection',
+                                        position: 'start'
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Final Balance'
+                            }
+                        },
+                        y: {
+                            title: {
+                                display: true,
+                                text: 'Number of Simulations'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>
