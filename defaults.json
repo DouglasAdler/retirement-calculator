@@ -1,12 +1,12 @@
 {
   "currentDate": "2025-12-03",
-  "yourBirthdate": "1964-04-22",
-  "spouseBirthdate": "1965-02-03",
+  "yourBirthdate": "1964-01-10",
+  "spouseBirthdate": "1965-01-01",
   "retirementAge": 65,
   "maxAge": 100,
-  "taxableAccounts": 2997000,
-  "retirementAccounts": 875000,
-  "annualExpenses": 190000,
+  "taxableAccounts": 2000000,
+  "retirementAccounts": 1000000,
+  "annualExpenses": 150000,
   "yourSSAge": 67,
   "yourSSBenefitAtFRA": 40000,
   "spouseSSAge": 67,
@@ -18,3 +18,4 @@
   "simulations": 1000,
   "seed": 0
 }
+
